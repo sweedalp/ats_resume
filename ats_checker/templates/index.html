@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS Resume Checker</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>ATS Resume Checker</h1>
+
+    <label>Job Role:</label>
+    <input type="text" id="role" placeholder="Enter role">
+
+    <label>Job Description:</label>
+    <textarea id="jobDesc" placeholder="Paste job description here"></textarea>
+
+    <label>Upload Resume (PDF or DOCX):</label>
+    <input type="file" id="resumeFile" accept=".pdf,.docx">
+
+    <button id="analyzeBtn">Analyze Resume</button>
+
+    <div id="result" style="margin-top:20px;"></div>
+  </div>
+
+  <script>
+    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('resumeFile');
+      const jobDesc = document.getElementById('jobDesc').value;
+      const role = document.getElementById('role').value;
+
+      if (!fileInput.files.length) {
+        alert("Please upload a resume first!");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('resume', file);
+      formData.append('jobDesc', jobDesc);
+      formData.append('role', role);
+
+      try {
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          alert(err.error || "Error analyzing resume");
+          return;
+        }
+
+        const data = await response.json();
+
+        let html = `<h2>ATS Score: ${data.atsScore}%</h2>`;
+        html += `<h3>Matched Keywords:</h3><ul>`;
+        data.matched.forEach(k => html += `<li>${k}</li>`);
+        html += `</ul><h3>Missing Keywords:</h3><ul>`;
+        data.missing.forEach(k => html += `<li>${k}</li>`);
+        html += `</ul>`;
+        html += `<a href="/download/${data.report}" target="_blank"><button>Download PDF Report</button></a>`;
+
+        document.getElementById('result').innerHTML = html;
+
+      } catch (err) {
+        console.error(err);
+        alert("An error occurred while analyzing the resume.");
+      }
+    });
+  </script>
+</body>
+</html>
